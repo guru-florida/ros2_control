@@ -25,7 +25,6 @@
 #include <rcppmath/clamp.hpp>
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -274,7 +273,12 @@ public:
    */
   void enforce_limits(const rclcpp::Duration & period) override
   {
-    assert(period.seconds() > 0.0);
+    double dt = period.seconds();
+    if(dt < 0.0) {
+      reset();
+      return;
+    } else if(dt == 0)
+      return;
 
     // Current position
     if (std::isnan(prev_pos_)) {
@@ -305,7 +309,6 @@ public:
     }
 
     // Position bounds
-    const double dt = period.seconds();
     double pos_low = pos + soft_min_vel * dt;
     double pos_high = pos + soft_max_vel * dt;
 
@@ -532,10 +535,14 @@ public:
     double vel_low;
     double vel_high;
 
-    if (limits_.has_acceleration_limits) {
-      assert(period.seconds() > 0.0);
-      const double dt = period.seconds();
+    const double dt = period.seconds();
+    if(dt < 0.0) {
+      reset();
+      return;
+    } else if(dt == 0)
+      return;
 
+    if (limits_.has_acceleration_limits) {
       vel_low = std::max(prev_vel_ - limits_.max_acceleration * dt, -limits_.max_velocity);
       vel_high = std::min(prev_vel_ + limits_.max_acceleration * dt, limits_.max_velocity);
     } else {
